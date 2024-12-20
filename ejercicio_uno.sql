@@ -74,7 +74,7 @@ pre_analisis AS
 			WHEN ROUND(S.stock / B.avg_daily_sales, 2) > 3
 			THEN 0
 		ELSE @demora_reposicion - ROUND(S.stock / B.avg_daily_sales, 2) 
-		END AS days_without_stock,
+		END AS projected_days_without_stock,
 		B.avg_daily_sales * 3 + @stock_seguridad AS stock_optimo,
 		CASE 
 			WHEN B.estimated_aggregated_sales = 0 -- Si las ventas estimadas de los proximos 3 dias son 0
@@ -86,7 +86,7 @@ pre_analisis AS
 			WHEN S.stock >= (B.estimated_aggregated_sales + @stock_seguridad) -- Si el stock me alcanza para cubrir las ventas de 3 días + el stock de seguridad
 			THEN 0 -- No compro nada
 		ELSE B.estimated_aggregated_sales + @stock_seguridad - S.stock -- Si el stock se me va a agotar, compro las ventas de 3 dias menos el actual asi renuevo el ciclo
-		END AS today_purchase,
+		END AS today_purchase
 	FROM stock AS S
 	LEFT JOIN    
 	(
