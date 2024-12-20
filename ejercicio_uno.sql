@@ -38,7 +38,7 @@ stock AS
 	SELECT 
 		P.product_description, 
         P.product_id,
-		P.q_units_purchased - IFNULL(S.q_sales,0) AS stock 
+		IFNULL(P.q_units_purchased,0) - IFNULL(S.q_sales,0) AS stock 
 	FROM purchases AS P  
 	LEFT JOIN sales AS S   
 	    ON P.product_id = S.product_id
@@ -74,12 +74,14 @@ SELECT
     ELSE @demora_reposicion - ROUND(S.stock / B.avg_daily_sales, 2) 
     END AS days_without_stock,
     CASE 
-		WHEN (S.stock - estimated_sales) >= (B.avg_daily_sales + @stock_seguridad) 
+		WHEN B.estimated_aggregated_sales = 0 
+		THEN 0
+		WHEN (S.stock - B.estimated_aggregated_sales) >= (B.avg_daily_sales + @stock_seguridad) 
         THEN 0
-		WHEN (S.stock - estimated_sales) > 0
-			AND (S.stock - estimated_sales) < (B.avg_daily_sales + @stock_seguridad)
+		WHEN (S.stock - B.estimated_aggregated_sales) > 0
         THEN B.avg_daily_sales + @stock_seguridad - S.stock
-    ELSE (B.avg_daily_sales + @stock_seguridad)
+		WHEN (S.stock - B.estimated_aggregated_sales) <= 0
+        THEN B.avg_daily_sales + @stock_seguridad
 	END AS today_purchase
 FROM stock AS S
 LEFT JOIN    
@@ -87,7 +89,10 @@ LEFT JOIN
 	SELECT	
 		product_id,
         IFNULL(avg_daily_sales,0) AS avg_daily_sales,
-		IFNULL(avg_daily_sales * @demora_reposicion,0) AS estimated_sales
+		IFNULL(avg_daily_sales * @demora_reposicion,0) AS estimated_aggregated_sales
 	FROM daily_sales
 ) AS B
 	ON S.product_id = B.product_id
+
+
+-- Siempre y cuando las compras sean diarias
