@@ -64,7 +64,7 @@ SELECT
     S.product_description,
     S.stock,
     B.avg_daily_sales,
-    estimated_sales,
+    estimated_aggregated_sales,
     ROUND(CASE WHEN B.avg_daily_sales = 0 THEN NULL ELSE S.stock / B.avg_daily_sales END, 2) AS days_until_stocks_out,
     CASE 
         WHEN B.avg_daily_sales = 0 
@@ -79,9 +79,9 @@ SELECT
 		WHEN (S.stock - B.estimated_aggregated_sales) >= (B.avg_daily_sales + @stock_seguridad) 
         THEN 0
 		WHEN (S.stock - B.estimated_aggregated_sales) > 0
-        THEN B.avg_daily_sales + @stock_seguridad - S.stock
+        THEN B.estimated_aggregated_sales + @stock_seguridad - S.stock
 		WHEN (S.stock - B.estimated_aggregated_sales) <= 0
-        THEN B.avg_daily_sales + @stock_seguridad
+        THEN B.estimated_aggregated_sales + @stock_seguridad
 	END AS today_purchase
 FROM stock AS S
 LEFT JOIN    
