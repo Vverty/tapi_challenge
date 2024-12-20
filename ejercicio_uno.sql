@@ -59,6 +59,21 @@ daily_sales AS
     ) AS A
     GROUP BY 1
 ),
+cost_revenue AS    
+(
+	SELECT 
+		A.product_id, 
+		A.product_description, 
+		ROUND(SUM(amount_unit * quantity_units) / SUM(quantity_units),2) AS avg_unit_cost,
+        precio_venta
+	FROM maestro_compras AS A
+    LEFT JOIN 
+    (
+		SELECT DISTINCT amount AS precio_venta, product_id FROM maestro_ventas
+    ) AS B
+    ON A.product_id = B.product_id
+	GROUP BY 1,2,4
+),
 pre_analisis AS    
 (
 	SELECT 
@@ -99,10 +114,14 @@ pre_analisis AS
 		ON S.product_id = B.product_id
 )
 SELECT 
-	*,
+	A.*,
 	CASE 
 		WHEN today_purchase > 0
 		THEN 0
 	ELSE stock - estimated_aggregated_sales - @stock_seguridad
-	END AS today_refunds
-FROM pre_analisis
+	END AS today_refunds,
+    B.avg_unit_price,
+    stock * B.avg_unit_price AS valor_stock_inmovilizado
+FROM pre_analisis AS A   
+LEFT JOIN stock_inmovilizado AS B   
+	ON A.product_id = B.product_id
