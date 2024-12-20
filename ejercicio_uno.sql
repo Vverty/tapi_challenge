@@ -78,7 +78,7 @@ SELECT
         THEN 0
 		WHEN (S.stock - estimated_sales) > 0
 			AND (S.stock - estimated_sales) < (B.avg_daily_sales + @stock_seguridad)
-        THEN B.avg_daily_sales + @stock_seguridad - S.stock - estimated_sales
+        THEN B.avg_daily_sales + @stock_seguridad - S.stock
     ELSE (B.avg_daily_sales + @stock_seguridad)
 	END AS today_purchase
 FROM stock AS S
