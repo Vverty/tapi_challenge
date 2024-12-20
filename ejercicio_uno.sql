@@ -58,41 +58,51 @@ daily_sales AS
 		GROUP BY 1,2
     ) AS A
     GROUP BY 1
-) 
-SELECT 
-	S.product_id,
-    S.product_description,
-    S.stock,
-    B.avg_daily_sales,
-    estimated_aggregated_sales,
-    ROUND(CASE WHEN B.avg_daily_sales = 0 THEN NULL ELSE S.stock / B.avg_daily_sales END, 2) AS days_until_stocks_out,
-    CASE 
-        WHEN B.avg_daily_sales = 0 
-        THEN 0
-        WHEN ROUND(S.stock / B.avg_daily_sales, 2) > 3
-        THEN 0
-    ELSE @demora_reposicion - ROUND(S.stock / B.avg_daily_sales, 2) 
-    END AS days_without_stock,
-    CASE 
-		WHEN B.estimated_aggregated_sales = 0 
-		THEN 0
-		WHEN (S.stock - B.estimated_aggregated_sales) >= (B.avg_daily_sales + @stock_seguridad) 
-        THEN 0
-		WHEN (S.stock - B.estimated_aggregated_sales) > 0
-        THEN B.estimated_aggregated_sales + @stock_seguridad - S.stock
-		WHEN (S.stock - B.estimated_aggregated_sales) <= 0
-        THEN B.estimated_aggregated_sales + @stock_seguridad
-	END AS today_purchase
-FROM stock AS S
-LEFT JOIN    
+),
+pre_analisis AS    
 (
-	SELECT	
-		product_id,
-        IFNULL(avg_daily_sales,0) AS avg_daily_sales,
-		IFNULL(avg_daily_sales * @demora_reposicion,0) AS estimated_aggregated_sales
-	FROM daily_sales
-) AS B
-	ON S.product_id = B.product_id
-
-
--- Siempre y cuando las compras sean diarias
+	SELECT 
+		S.product_id,
+		S.product_description,
+		S.stock,
+		B.avg_daily_sales,
+		estimated_aggregated_sales,
+		ROUND(CASE WHEN B.avg_daily_sales = 0 THEN NULL ELSE S.stock / B.avg_daily_sales END, 2) AS days_until_stocks_out,
+		CASE 
+			WHEN B.avg_daily_sales = 0 
+			THEN 0
+			WHEN ROUND(S.stock / B.avg_daily_sales, 2) > 3
+			THEN 0
+		ELSE @demora_reposicion - ROUND(S.stock / B.avg_daily_sales, 2) 
+		END AS days_without_stock,
+		B.avg_daily_sales * 3 + @stock_seguridad AS stock_optimo,
+		CASE 
+			WHEN B.estimated_aggregated_sales = 0 -- Si las ventas estimadas de los proximos 3 dias son 0
+				AND S.stock < @stock_seguridad -- El stock actual es menor al stock de seguridad
+			THEN @stock_seguridad - S.stock -- Compro la diferencia entre el stock y el stock de seguridad
+			WHEN B.estimated_aggregated_sales = 0 -- Si las ventas estimadas de los proximos 3 dias son 0
+				AND S.stock >= @stock_seguridad -- El stock actual es mayor al stock de seguridad
+			THEN 0 -- No compro nada
+			WHEN S.stock >= (B.estimated_aggregated_sales + @stock_seguridad) -- Si el stock me alcanza para cubrir las ventas de 3 días + el stock de seguridad
+			THEN 0 -- No compro nada
+		ELSE B.estimated_aggregated_sales + @stock_seguridad - S.stock -- Si el stock se me va a agotar, compro las ventas de 3 dias menos el actual asi renuevo el ciclo
+		END AS today_purchase,
+	FROM stock AS S
+	LEFT JOIN    
+	(
+		SELECT	
+			product_id,
+			IFNULL(avg_daily_sales,0) AS avg_daily_sales,
+			IFNULL(avg_daily_sales * @demora_reposicion,0) AS estimated_aggregated_sales
+		FROM daily_sales
+	) AS B
+		ON S.product_id = B.product_id
+)
+SELECT 
+	*,
+	CASE 
+		WHEN today_purchase > 0
+		THEN 0
+	ELSE stock - estimated_aggregated_sales - @stock_seguridad
+	END AS today_refunds
+FROM pre_analisis
