@@ -64,12 +64,12 @@ cost_revenue AS
 	SELECT 
 		A.product_id, 
 		A.product_description, 
-		ROUND(SUM(amount_unit * quantity_units) / SUM(quantity_units),2) AS avg_unit_cost,
-        precio_venta
+		ROUND(SUM(amount_unit * quantity_units) / SUM(quantity_units),2) AS avg_unit_cost, -- Precio Promedio Ponderado
+        unit_sale_price
 	FROM maestro_compras AS A
     LEFT JOIN 
     (
-		SELECT DISTINCT amount AS precio_venta, product_id FROM maestro_ventas
+		SELECT DISTINCT amount AS unit_sale_price, product_id FROM maestro_ventas
     ) AS B
     ON A.product_id = B.product_id
 	GROUP BY 1,2,4
@@ -90,7 +90,7 @@ pre_analisis AS
 			THEN 0
 		ELSE @demora_reposicion - ROUND(S.stock / B.avg_daily_sales, 2) 
 		END AS projected_days_without_stock,
-		B.avg_daily_sales * 3 + @stock_seguridad AS stock_optimo,
+		B.estimated_aggregated_sales + @stock_seguridad AS optimal_stock,
 		CASE 
 			WHEN B.estimated_aggregated_sales = 0 -- Si las ventas estimadas de los proximos 3 dias son 0
 				AND S.stock < @stock_seguridad -- El stock actual es menor al stock de seguridad
@@ -112,16 +112,42 @@ pre_analisis AS
 		FROM daily_sales
 	) AS B
 		ON S.product_id = B.product_id
+),
+analisis AS    
+(
+	SELECT 
+		*,
+		stock * avg_unit_cost AS current_stock_value ,
+		ROUND(((unit_sale_price - avg_unit_cost) * 0.2) * (stock - today_refund),2) AS net_income 
+	FROM 
+		(
+			SELECT
+				A.*,
+				CASE 
+					WHEN today_purchase > 0
+					THEN 0
+				ELSE stock - estimated_aggregated_sales - @stock_seguridad
+				END AS today_refund,
+				B.avg_unit_cost,
+				B.unit_sale_price
+			FROM pre_analisis AS A   
+			LEFT JOIN cost_revenue AS B   
+				ON A.product_id = B.product_id
+		) AS A
 )
 SELECT 
-	A.*,
-	CASE 
-		WHEN today_purchase > 0
-		THEN 0
-	ELSE stock - estimated_aggregated_sales - @stock_seguridad
-	END AS today_refunds,
-    B.avg_unit_price,
-    stock * B.avg_unit_price AS valor_stock_inmovilizado
-FROM pre_analisis AS A   
-LEFT JOIN stock_inmovilizado AS B   
-	ON A.product_id = B.product_id
+	product_id, 
+	product_description,
+	stock AS current_stock, -- 3. Cantidad de unidades del stock actual.
+	current_stock_value, -- 3. Valor total del stock actual.
+	avg_daily_sales, -- Ventas diarias promedio.
+	estimated_aggregated_sales, -- avg_daily_sales + @stock_seguridad
+	days_until_stocks_out, -- Días hasta quebrar stock.
+	projected_days_without_stock, -- Tiempo de demora en salir del quiebre de stock.
+	optimal_stock, -- Stock óptimo.
+	today_purchase, -- 1. Cantidad de pines a comprar.
+	today_refund, -- 2. Cantidad de pines a devolver.
+	avg_unit_cost, -- Costo unitario promedio (PPP).
+	unit_sale_price, -- Precio de venta unitario.
+	net_income -- 4. Ingreso neto post devolución de sobrestock.
+FROM analisis
