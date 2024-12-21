@@ -27,7 +27,7 @@ Las respuestas detalladas al desafío se encuentran disponibles en el siguiente 
 
 ## Consultas SQL
 Las consultas SQL que sustentan los cálculos realizados para responder el desafío se encuentran en este repositorio de GitHub:  
-[Repositorio de consultas SQL - GitHub](https://github.com/Vverty/tapi_challenge)
+[Repositorio de consultas SQL - GitHub](https://github.com/Vverty/tapi_challenge/tree/main/consultas)
 
 A su vez, se explican ahi mismo la lógica de cálculo.
 
