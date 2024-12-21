@@ -1,3 +1,36 @@
+/*
+--------------------------------------------------------------------------------
+-- Script Name:    solucion.sql
+-- Description:    El siguiente script tiene como finalidad hacer un análisis del stock de pines digitales de Tapi.   
+--                 Analiza cuestiones como las compras y devoluciones diarias, valor del stock inmovilizado, ingreso neto, entre otras.
+--                 
+-- Author:         [Felipe Lorenzo]
+-- Created Date:   [2024-12-21]
+-- Last Modified:  [2024-12-21]
+-- Version:        1.0
+--
+-- Parameters:
+--   - @stock_seguridad: Define la cantidad mínima de pines que deben mantenerse como stock de seguridad.
+--   - @demora_reposicion: Define el número de días estimados para el reabastecimiento de stock.
+--
+-- Output:
+--   - current_stock: Cantidad de unidades del stock actual.
+--   - current_stock_value: Valor total del stock actual.
+--   - avg_daily_sales: Ventas diarias promedio.
+--   - estimated_aggregated_sales: Ventas estimadas para los próximos @demora_reposicion días.
+--   - days_until_stocks_out: Días hasta que se agote el stock.
+--   - projected_days_without_stock: Proyección de días sin stock.
+--   - optimal_stock: Stock óptimo que debe mantenerse.
+--   - today_purchase: Cantidad de pines a comprar hoy.
+--   - today_refund: Cantidad de pines a devolver hoy si hay sobrestock.
+--   - avg_unit_cost: Costo unitario promedio.
+--   - unit_sale_price: Precio de venta unitario.
+--   - net_income: Ingreso neto post devolución de sobrestock.
+--
+-- Change Log:
+--   - 2024-12-21: Creacion inicial del script.
+--------------------------------------------------------------------------------
+*/
 
 SET @stock_seguridad = 20; -- Cantidad de pines como stock de seguridad
 SET @demora_reposicion = 3; -- Dias de demora en reposicion
