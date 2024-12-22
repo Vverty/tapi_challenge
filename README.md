@@ -5,7 +5,7 @@ Este repositorio contiene la resolución del desafío planteado por **Tapi**. A 
 ## Consideraciones
 
 1. **Stock óptimo:**  
-   Se considera como stock óptimo el resultado de las ventas diarias multiplicadas por la demora en reposición más el stock de seguridad. Esto asume que una vez que el stock disminuya al nivel de seguridad, se realiza una orden para que llegue justo cuando se alcance ese punto. Si el stock ya está próximo a agotarse, no tiene sentido comprar en exceso, ya que los productos llegarán después del quiebre de stock. Se busca en tener días tener el stock óptimo en todos los productos.
+   Se considera como stock óptimo el resultado de las ventas diarias multiplicadas por la demora en reposición más el stock de seguridad. Esto asume que una vez que el stock disminuya al nivel de seguridad, se realiza una orden para que llegue justo cuando se alcance ese punto. Si el stock ya está próximo a agotarse, no tiene sentido comprar en exceso, ya que los productos llegarán después del quiebre de stock. Se busca en 3 días tener el stock óptimo en todos los productos.
 
 2. **Devoluciones:**  
    Para determinar qué productos devolver, se considera que el stock de esos productos está por encima del nivel óptimo calculado.
