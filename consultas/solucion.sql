@@ -126,16 +126,12 @@ pre_analisis AS
 		END AS projected_days_without_stock, -- Cuantos dias voy a estar sin stock 
 		B.estimated_aggregated_sales + @stock_seguridad AS optimal_stock, -- Stock optimo
 		CASE 
-			WHEN B.estimated_aggregated_sales = 0 -- Si las ventas estimadas de los proximos 3 dias son 0
-				AND S.stock < @stock_seguridad -- El stock actual es menor al stock de seguridad
-			THEN @stock_seguridad - S.stock -- Compro la diferencia entre el stock y el stock de seguridad
-			WHEN B.estimated_aggregated_sales = 0 -- Si las ventas estimadas de los proximos 3 dias son 0
-				AND S.stock >= @stock_seguridad -- El stock actual es mayor al stock de seguridad
-			THEN 0 -- No compro nada
-			WHEN S.stock >= (B.estimated_aggregated_sales + @stock_seguridad) -- Si el stock me alcanza para cubrir las ventas de 3 días + el stock de seguridad
-			THEN 0 -- No compro nada
-		ELSE B.estimated_aggregated_sales + @stock_seguridad - S.stock -- Si el stock se me va a agotar, compro las ventas de 3 dias menos el actual asi renuevo el ciclo
-		END AS today_purchase -- Compra de hoy
+			WHEN S.stock >= (B.estimated_aggregated_sales + @stock_seguridad) -- Si el stock es igual o mayor al optimo, no compro nada.
+			THEN 0
+			WHEN S.stock >= B.estimated_aggregated_sales -- Si el stock es solo mayor a las ventas estimadas, compro la diferencia para llegar al optimo.
+			THEN (B.estimated_aggregated_sales + @stock_seguridad) - S.stock 
+		ELSE B.estimated_aggregated_sales + @stock_seguridad -- Si no me alcanza ni siquiera para llegar a las ventas, compro el optimo para normalizar el ciclo en 3 dias.
+		END AS today_purchase
 	FROM stock AS S
 	LEFT JOIN    
 	(
