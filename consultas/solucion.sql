@@ -126,13 +126,11 @@ pre_analisis AS
 		END AS projected_days_without_stock, -- Cuantos dias voy a estar sin stock 
 		B.estimated_aggregated_sales + @stock_seguridad AS optimal_stock, -- Stock optimo
 		CASE 
-			WHEN S.stock >= (B.estimated_aggregated_sales + @stock_seguridad) -- Si el stock es igual o mayor al optimo, no compro nada.
-			THEN 0
-			WHEN S.stock >= B.estimated_aggregated_sales -- Si el stock es solo mayor a las ventas estimadas, compro la diferencia para llegar al optimo.
-			THEN (B.estimated_aggregated_sales + @stock_seguridad) - S.stock 
-		ELSE B.estimated_aggregated_sales + @stock_seguridad -- Si no me alcanza ni siquiera para llegar a las ventas, compro el optimo para normalizar el ciclo en 3 dias.
+			WHEN S.stock < B.estimated_aggregated_sales -- Si no me alcanza para curbrir, compro stock optimo para normalizar quebranto
+			THEN B.estimated_aggregated_sales + @stock_seguridad
+		ELSE GREATEST(0, (B.estimated_aggregated_sales + @stock_seguridad + B.estimated_aggregated_sales) - S.stock) -- Teniendo en cuenta las ventas de estos 3 dias y que quiero tener optimo en 3 dias, solo compro si no me alcanza para solventar ambos.
 		END AS today_purchase
-	FROM stock AS S
+	FROM stock AS S 
 	LEFT JOIN    
 	(
 		SELECT	
@@ -147,7 +145,7 @@ analisis AS
 (
 	SELECT -- Tabla para realizar calculos de Q a devolver, valor de stock actual e ingreso neto post devolucion
 		*,
-		stock * avg_unit_cost AS current_stock_value ,
+		stock * avg_unit_cost AS current_stock_value,
 		ROUND(((unit_sale_price - avg_unit_cost) * 0.2) * (stock - today_refund),2) AS net_income 
 	FROM 
 		(
@@ -156,7 +154,7 @@ analisis AS
 				CASE 
 					WHEN today_purchase > 0 -- Si tuve que comprar hoy, no devuelvo nada
 					THEN 0
-				ELSE stock - estimated_aggregated_sales - @stock_seguridad -- Si no compre hoy, devuelvo el stock que supere mi stock optimo
+				ELSE stock - estimated_aggregated_sales - estimated_aggregated_sales - @stock_seguridad -- Si no compre hoy, devuelvo el stock que supere lo que me permita tener stock optimo en 3 dias
 				END AS today_refund,
 				B.avg_unit_cost,
 				B.unit_sale_price
